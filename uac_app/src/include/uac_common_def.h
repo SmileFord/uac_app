@@ -14,18 +14,31 @@
  * limitations under the License.
  *
  */
-#ifndef _ROCKIT_GRAPH_CONTROL_H_
-#define _ROCKIT_GRAPH_CONTROL_H_
+#ifndef SRC_INCLUDE_UAC_COMMON_DEF_H_
+#define SRC_INCLUDE_UAC_COMMON_DEF_H_
 
-#include "uac_control.h"
-#include <rt_header.h>
-#include <rt_metadata.h>
-#include <RTUACGraph.h>
-#include <RTMediaBuffer.h>
-#include <rt_metadata.h>
-#include <RTMediaMetaKeys.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <sys/time.h>
+#include <stdbool.h>
+#include <math.h>
+#include <stdio.h>
+#include <string.h>
+#include <dirent.h>
+#include <errno.h>
+#include <pthread.h>
+#include <pwd.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <sys/prctl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
 
-enum UACStreamType {
+enum UacStreamType {
     // our device record datas from usb, pc/remote->our device
     UAC_STREAM_RECORD = 0,
     // play datas to usb, our device->pc/remote
@@ -33,15 +46,11 @@ enum UACStreamType {
     UAC_STREAM_MAX
 };
 
-typedef struct _UACAudioConfig {
+typedef struct _UacAudioConfig {
     int samplerate;
     float volume;
     int mute;
     int ppm;
-} UACAudioConfig;
+} UacAudioConfig;
 
-void graph_set_samplerate(RTUACGraph* uac, int type, UACAudioConfig& config);
-void graph_set_volume(RTUACGraph* uac, int type, UACAudioConfig& config);
-void graph_set_ppm(RTUACGraph* uac, int type, UACAudioConfig& config);
-
-#endif  // _ROCKIT_GRAPH_CONTROL_H_
+#endif  // SRC_INCLUDE_UAC_COMMON_DEF_H_

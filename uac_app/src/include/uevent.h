@@ -30,8 +30,8 @@
  * SOFTWARE.
  */
 
-#ifndef __UEVENT_H__
-#define __UEVENT_H__
+#ifndef SRC_INCLUDE_UEVENT_H_
+#define SRC_INCLUDE_UEVENT_H_
 
 #include <stdio.h>
 #include <stdbool.h>
@@ -44,5 +44,5 @@ struct _uevent {
 
 int uevent_monitor_run();
 
-#endif
+#endif  // SRC_INCLUDE_UEVENT_H_
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef _RK_UAC_LOGGER_H_
-#define _RK_UAC_LOGGER_H_
+#ifndef SRC_INCLUDE_UAC_LOGGER_H_
+#define SRC_INCLUDE_UAC_LOGGER_H_
 
 #ifdef ENABLE_MINILOGGER
 #include "minilogger/log.h"
@@ -71,4 +71,4 @@ extern int uac_app_log_level;
               ##__VA_ARGS__);                                                  \
   } while (0)
 
-#endif  //  _RK_UAC_LOGGER_H_
+#endif  //  SRC_INCLUDE_UAC_LOGGER_H_

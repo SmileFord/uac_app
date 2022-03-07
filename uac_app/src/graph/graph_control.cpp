@@ -15,8 +15,8 @@
  *
  */
 
-#include "graph_control.h"
 #include "uac_log.h"
+#include "graph_control.h"
 
 #define OPT_SAMPLE_RATE "opt_samaple_rate"
 #define OPT_CHANNELS    "opt_channel"
@@ -36,8 +36,7 @@
 #define LOG_TAG "graph"
 #endif // LOG_TAG
 
-
-void graph_set_samplerate(RTUACGraph* uac, int type, UACAudioConfig& config) {
+void graph_set_samplerate(RTUACGraph* uac, int type, UacAudioConfig& config) {
     if (uac == NULL)
         return;
 
@@ -71,7 +70,7 @@ void graph_set_samplerate(RTUACGraph* uac, int type, UACAudioConfig& config) {
     uac->invoke(GRAPH_CMD_TASK_NODE_PRIVATE_CMD, &meta);
 }
 
-void graph_set_volume(RTUACGraph* uac, int type, UACAudioConfig& config) {
+void graph_set_volume(RTUACGraph* uac, int type, UacAudioConfig& config) {
     if (uac == NULL)
         return;
 
@@ -101,7 +100,7 @@ void graph_set_volume(RTUACGraph* uac, int type, UACAudioConfig& config) {
     uac->invoke(GRAPH_CMD_TASK_NODE_PRIVATE_CMD, &meta);
 }
 
-void graph_set_ppm(RTUACGraph* uac, int type, UACAudioConfig& config) {
+void graph_set_ppm(RTUACGraph* uac, int type, UacAudioConfig& config) {
     if (uac == NULL)
         return;
 

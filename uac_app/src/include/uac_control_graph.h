@@ -14,5 +14,26 @@
  * limitations under the License.
  *
  */
+#ifndef SRC_INCLUDE_UAC_CONTROL_GRAPH_H_
+#define SRC_INCLUDE_UAC_CONTROL_GRAPH_H_
 
-int aec_write_paramters();
+#include "uac_control.h"
+
+class UACControlGraph : public UACControl {
+ public:
+    UACControlGraph();
+    virtual ~UACControlGraph();
+
+ public:
+    virtual int uacStart(int type);
+    virtual void uacStop(int type);
+    virtual void uacSetSampleRate(int type, int sampleRate);
+    virtual void uacSetVolume(int type, int volume);
+    virtual void uacSetMute(int type, int mute);
+    virtual void uacSetPpm(int type, int ppm);
+
+ private:
+    void *mCtx;
+};
+
+#endif  // SRC_INCLUDE_UAC_CONTROL_GRAPH_H_

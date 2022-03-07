@@ -305,14 +305,19 @@ void audio_event(const struct _uevent *uevent) {
     }
 
     if (setInterface) {
+        ALOGD("uevent---------------audio_play\n");
         audio_play(uevent);
     } else if(setSampleRate) {
+        ALOGD("uevent---------------audio_set_samplerate\n");
         audio_set_samplerate(uevent);
     } else if(setVolume) {
+        ALOGD("uevent---------------setVolume\n");
         audio_set_volume(uevent);
     } else if(setMute) {
+        ALOGD("uevent---------------setMute\n");
         audio_set_mute(uevent);
     }  else if(setClk) {
+        ALOGD("uevent---------------setClk\n");
         audio_set_ppm(uevent);
     }
 }

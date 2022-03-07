@@ -37,7 +37,18 @@ int main(int argc, char *argv[])
     debug_level_init();
     ALOGI("uac uevent version = 1.0\n");
     // create uac control
-    int result = uac_control_create();
+    char *ch;
+    int type = UAC_API_MPI;
+    if (argv[1]) {
+        ch = argv[1];
+        if (strcmp(ch, "graph") == 0) {
+            type = UAC_API_GRAPH;
+        } else if(strcmp(ch, "mpi") == 0) {
+            type = UAC_API_MPI;
+        }
+    }
+
+    int result = uac_control_create(type);
     if (result < 0) {
         ALOGE("uac_control_create error\n");
         return 0;

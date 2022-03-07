@@ -14,11 +14,30 @@
  * limitations under the License.
  *
  */
-#ifndef _ROCKIT_UAC_CONTROL_H_
-#define _ROCKIT_UAC_CONTROL_H_
+#ifndef SRC_INCLUDE_UAC_CONTROL_H_
+#define SRC_INCLUDE_UAC_CONTROL_H_
 
+#include "uac_common_def.h"
 
-#include "graph_control.h"
+enum UacApiType {
+    UAC_API_MPI   = 0,
+    UAC_API_GRAPH = 1,
+    UAC_API_MAX
+};
+
+class UACControl {
+ public:
+    UACControl() {}
+    virtual ~UACControl() {}
+
+ public:
+    virtual int uacStart(int type) = 0;
+    virtual void uacStop(int type) = 0; 
+    virtual void uacSetSampleRate(int type, int sampleRate) = 0;
+    virtual void uacSetVolume(int type, int volume) = 0;
+    virtual void uacSetMute(int type, int mute) = 0;
+    virtual void uacSetPpm(int type, int ppm) = 0;
+};
 
 int uac_start(int type);
 void uac_stop(int type);
@@ -27,7 +46,7 @@ void uac_set_volume(int type, int volume);
 void uac_set_mute(int type, int mute);
 void uac_set_ppm(int type, int ppm);
 
-int uac_control_create();
+int uac_control_create(int type);
 void uac_control_destory();
 
-#endif  // _ROCKIT_UAC_CONTROL_H_
+#endif  // SRC_INCLUDE_UAC_CONTROL_H_
