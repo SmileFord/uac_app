@@ -21,16 +21,16 @@
 
 class UACControlGraph : public UACControl {
  public:
-    UACControlGraph();
+    UACControlGraph(int mode);
     virtual ~UACControlGraph();
 
  public:
-    virtual int uacStart(int type);
-    virtual void uacStop(int type);
-    virtual void uacSetSampleRate(int type, int sampleRate);
-    virtual void uacSetVolume(int type, int volume);
-    virtual void uacSetMute(int type, int mute);
-    virtual void uacSetPpm(int type, int ppm);
+    virtual int uacStart();
+    virtual void uacStop();
+    virtual void uacSetSampleRate(int sampleRate);
+    virtual void uacSetVolume(int volume);
+    virtual void uacSetMute(int mute);
+    virtual void uacSetPpm(int ppm);
 
  private:
     void *mCtx;

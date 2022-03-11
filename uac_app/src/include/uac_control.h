@@ -31,20 +31,20 @@ class UACControl {
     virtual ~UACControl() {}
 
  public:
-    virtual int uacStart(int type) = 0;
-    virtual void uacStop(int type) = 0; 
-    virtual void uacSetSampleRate(int type, int sampleRate) = 0;
-    virtual void uacSetVolume(int type, int volume) = 0;
-    virtual void uacSetMute(int type, int mute) = 0;
-    virtual void uacSetPpm(int type, int ppm) = 0;
+    virtual int uacStart() = 0;
+    virtual void uacStop() = 0;
+    virtual void uacSetSampleRate(int sampleRate) = 0;
+    virtual void uacSetVolume(int volume) = 0;
+    virtual void uacSetMute(int mute) = 0;
+    virtual void uacSetPpm(int ppm) = 0;
 };
 
-int uac_start(int type);
-void uac_stop(int type);
-void uac_set_sample_rate(int type, int samplerate);
-void uac_set_volume(int type, int volume);
-void uac_set_mute(int type, int mute);
-void uac_set_ppm(int type, int ppm);
+int uac_start(int mode);
+void uac_stop(int mode);
+void uac_set_sample_rate(int mode, int samplerate);
+void uac_set_volume(int mode, int volume);
+void uac_set_mute(int mode, int mute);
+void uac_set_ppm(int mode, int ppm);
 
 int uac_control_create(int type);
 void uac_control_destory();

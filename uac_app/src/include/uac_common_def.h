@@ -30,6 +30,7 @@
 #include <pwd.h>
 #include <stdarg.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -37,6 +38,29 @@
 #include <sys/prctl.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
+
+#define OPT_SAMPLE_RATE "opt_samaple_rate"
+#define OPT_CHANNELS    "opt_channel"
+#define OPT_VOLUME      "opt_volume"
+#define OPT_MUTE        "opt_mute"
+#define OPT_CONFIGS     "opt_configs"
+#define OPT_PPM         "opt_ppm"
+
+#define OPT_SET_ALSA_CAPTURE "set_capture_config"
+#define OPT_SET_RESAMPLE     "set_resample_config"
+#define OPT_SET_VOLUME       "set_volume_config"
+#define OPT_SET_CONFIG       "set_config"
+#define OPT_SET_PPM          "set_ppm"
+
+#define ARRAY_ELEMS(a)      (sizeof(a) / sizeof((a)[0]))
+
+#define GET_ENTRY_VALUE(INPUT1, INPUT2, MAP, KEY1, KEY2, VALUE)                \
+    do {                                                                       \
+        for (size_t i = 0; i < ARRAY_ELEMS(MAP); i++) {                        \
+            if (INPUT1 == MAP[i].KEY1 && INPUT2 == MAP[i].KEY2)                \
+                return MAP[i].VALUE;                                           \
+        }                                                                      \
+    } while (0)
 
 enum UacStreamType {
     // our device record datas from usb, pc/remote->our device
@@ -48,7 +72,10 @@ enum UacStreamType {
 
 typedef struct _UacAudioConfig {
     int samplerate;
-    float volume;
+    union {
+        int   intVol;
+        float floatVol;
+    };
     int mute;
     int ppm;
 } UacAudioConfig;

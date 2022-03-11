@@ -21,16 +21,16 @@
 
 class UACControlMpi : public UACControl {
  public:
-    UACControlMpi();
+    UACControlMpi(int mode);
     virtual ~UACControlMpi();
 
  public:
-    virtual int uacStart(int type);
-    virtual void uacStop(int type);
-    virtual void uacSetSampleRate(int type, int sampleRate);
-    virtual void uacSetVolume(int type, int volume);
-    virtual void uacSetMute(int type, int mute);
-    virtual void uacSetPpm(int type, int ppm);
+    virtual int uacStart();
+    virtual void uacStop();
+    virtual void uacSetSampleRate(int sampleRate);
+    virtual void uacSetVolume(int volume);
+    virtual void uacSetMute(int mute);
+    virtual void uacSetPpm(int ppm);
 
  protected:
     int startAi();
@@ -43,5 +43,8 @@ class UACControlMpi : public UACControl {
  private:
     void *mCtx;
 };
+
+void mpi_sys_init();
+void mpi_sys_destrory();
 
 #endif  // SRC_INCLUDE_UAC_CONTROL_MPI_H_

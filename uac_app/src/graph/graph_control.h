@@ -18,12 +18,12 @@
 #define SRC_GRAPH_GRAPH_CONTROL_H_
 
 #include "uac_common_def.h"
-#include <rockit/rt_header.h>
-#include <rockit/rt_metadata.h>
-#include <rockit/RTUACGraph.h>
-#include <rockit/RTMediaBuffer.h>
-#include <rockit/rt_metadata.h>
-#include <rockit/RTMediaMetaKeys.h>
+#include <rt_header.h>
+#include <rt_metadata.h>
+#include <RTUACGraph.h>
+#include <RTMediaBuffer.h>
+#include <rt_metadata.h>
+#include <RTMediaMetaKeys.h>
 
 void graph_set_samplerate(RTUACGraph* uac, int type, UacAudioConfig& config);
 void graph_set_volume(RTUACGraph* uac, int type, UacAudioConfig& config);

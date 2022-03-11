@@ -18,22 +18,9 @@
 #include "uac_log.h"
 #include "graph_control.h"
 
-#define OPT_SAMPLE_RATE "opt_samaple_rate"
-#define OPT_CHANNELS    "opt_channel"
-#define OPT_VOLUME      "opt_volume"
-#define OPT_MUTE        "opt_mute"
-#define OPT_CONFIGS     "opt_configs"
-#define OPT_PPM         "opt_ppm"
-
-#define OPT_SET_ALSA_CAPTURE "set_capture_config"
-#define OPT_SET_RESAMPLE     "set_resample_config"
-#define OPT_SET_VOLUME       "set_volume_config"
-#define OPT_SET_CONFIG       "set_config"
-#define OPT_SET_PPM          "set_ppm"
-
 #ifdef LOG_TAG
 #undef LOG_TAG
-#define LOG_TAG "graph"
+#define LOG_TAG "graph_control"
 #endif // LOG_TAG
 
 void graph_set_samplerate(RTUACGraph* uac, int type, UacAudioConfig& config) {
@@ -76,7 +63,7 @@ void graph_set_volume(RTUACGraph* uac, int type, UacAudioConfig& config) {
 
     RtMetaData meta;
     int mute = config.mute;
-    float volume = config.volume;
+    float volume = config.floatVol;
     ALOGD("type = %d, mute = %d, volume = %f\n", type, mute, volume);
     if (type == UAC_STREAM_RECORD) {
        /*

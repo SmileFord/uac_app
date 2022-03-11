@@ -30,6 +30,8 @@ else
         $(info ### unsupport RK_APP_CHIP)
 endif
 
+RK_APP_CFLAGS = -I $(RK_APP_MEDIA_INCLUDE_PATH)
+
 RK_APP_LDFLAGS = -L $(RK_APP_MEDIA_LIBS_PATH)
 
 RK_APP_OPTS += -Wl,-rpath-link,$(RK_APP_MEDIA_LIBS_PATH):$(RK_APP_PATH_LIB_INCLUDE)/root/usr/lib

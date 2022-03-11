@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 
     int result = uac_control_create(type);
     if (result < 0) {
-        ALOGE("uac_control_create error\n");
+        ALOGE("uac_control_create fail\n");
         return 0;
     }
 

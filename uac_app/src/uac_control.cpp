@@ -20,27 +20,47 @@
 #include "uac_control_graph.h"
 #include "uac_control.h"
 
-typedef struct _UacControl {
-    UACControl *uacControl;
-} UacControl;
+typedef struct _UacControls {
+    int mode;
+    UACControl *uac;
+    pthread_mutex_t mutex;
+} UacControls;
 
-static UacControl *gUAControl = NULL;
+static UacControls *gUAControl = NULL;
 int uac_control_create(int type) {
+    ALOGD("-------------uac use %s--------------\n", type == 0 ? "mpi" : "graph");
     if (!gUAControl) {
         uac_control_destory();
     }
 
-    gUAControl = (UacControl*)calloc(1, sizeof(UacControl));
+#ifdef UAC_MPI
+    mpi_sys_init();
+#endif
+
+    int i = 0;
+    gUAControl = (UacControls*)calloc(UAC_STREAM_MAX, sizeof(UacControls));
     if (!gUAControl) {
         ALOGE("fail to malloc memory!\n");
         return -1;
     }
 
-    memset(gUAControl, 0, sizeof(UacControl));
-    if (type == UAC_API_MPI) {
-        gUAControl->uacControl = new UACControlMpi();
-    } else if (type == UAC_API_GRAPH) {
-        gUAControl->uacControl = new UACControlGraph();
+    memset(gUAControl, 0, sizeof(UacControls));
+    for (i = 0; i < UAC_STREAM_MAX; i++) {
+        gUAControl[i].mode = i;
+        pthread_mutex_init(&gUAControl[i].mutex, NULL);
+        if (type == UAC_API_MPI) {
+#ifdef UAC_MPI
+            gUAControl[i].uac = new UACControlMpi(i);
+#endif
+        } else if (type == UAC_API_GRAPH) {
+#ifdef UAC_GRAPH
+            gUAControl[i].uac = new UACControlGraph(i);
+#endif
+        }
+        if (!gUAControl[i].uac) {
+            uac_control_destory();
+            return -1;
+        }
     }
 
     return 0;
@@ -50,42 +70,80 @@ void uac_control_destory() {
     if (gUAControl == NULL)
         return;
 
-    if (gUAControl->uacControl) {
-        delete gUAControl->uacControl;
+    int i = 0;
+    UACControl *uac = NULL;
+    if (gUAControl) {
+        for (i = 0; i < UAC_STREAM_MAX; i++) {
+            uac = gUAControl[i].uac;
+            if (uac) delete uac;
+            pthread_mutex_destroy(&gUAControl[i].mutex);
+        }
     }
+
+    free(gUAControl);
     gUAControl = NULL;
+    
+#ifdef UAC_MPI
+    mpi_sys_destrory();
+#endif
 }
 
-UACControl* getControlContext() {
-    return gUAControl->uacControl;
+UacControls* getControlContext(int mode) {
+    return &gUAControl[mode];
 }
 
-int uac_start(int type) {
-    UACControl *uacControl = getControlContext();
-    return uacControl->uacStart(type);
+int uac_start(int mode) {
+    int ret = 0;
+    UacControls *uacs = getControlContext(mode);
+    pthread_mutex_lock(&uacs->mutex);
+    if (mode == uacs->mode) {
+        ret = uacs->uac->uacStart();
+    }
+    pthread_mutex_unlock(&uacs->mutex);
+    return ret;
 }
 
-void uac_stop(int type) {
-    UACControl *uacControl = getControlContext();
-    uacControl->uacStop(type);
+void uac_stop(int mode) {
+    UacControls *uacs = getControlContext(mode);
+    pthread_mutex_lock(&uacs->mutex);
+    if (mode == uacs->mode) {
+        uacs->uac->uacStop();
+    }
+    pthread_mutex_unlock(&uacs->mutex);
 }
 
-void uac_set_sample_rate(int type, int samplerate) {
-    UACControl *uacControl = getControlContext();
-    uacControl->uacSetSampleRate(type, samplerate);
+void uac_set_sample_rate(int mode, int samplerate) {
+   UacControls *uacs = getControlContext(mode);
+    pthread_mutex_lock(&uacs->mutex);
+    if (mode == uacs->mode) {
+        uacs->uac->uacSetSampleRate(samplerate);
+    }
+    pthread_mutex_unlock(&uacs->mutex);
 }
 
-void uac_set_volume(int type, int volume) {
-    UACControl *uacControl = getControlContext();
-    uacControl->uacSetVolume(type, volume);
+void uac_set_volume(int mode, int volume) {
+    UacControls *uacs = getControlContext(mode);
+    pthread_mutex_lock(&uacs->mutex);
+    if (mode == uacs->mode) {
+        uacs->uac->uacSetVolume(volume);
+    }
+    pthread_mutex_unlock(&uacs->mutex);
 }
 
-void uac_set_mute(int type, int mute) {
-    UACControl *uacControl = getControlContext();
-    uacControl->uacSetMute(type, mute);
+void uac_set_mute(int mode, int mute) {
+    UacControls *uacs = getControlContext(mode);
+    pthread_mutex_lock(&uacs->mutex);
+    if (mode == uacs->mode) {
+        uacs->uac->uacSetMute(mute);
+    }
+    pthread_mutex_unlock(&uacs->mutex);
 }
 
-void uac_set_ppm(int type, int ppm) {
-    UACControl *uacControl = getControlContext();
-    uacControl->uacSetPpm(type, ppm);
+void uac_set_ppm(int mode, int ppm) {
+    UacControls *uacs = getControlContext(mode);
+    pthread_mutex_lock(&uacs->mutex);
+    if (mode == uacs->mode) {
+        uacs->uac->uacSetPpm(ppm);
+    }
+    pthread_mutex_unlock(&uacs->mutex);
 }

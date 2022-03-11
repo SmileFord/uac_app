@@ -37,13 +37,13 @@
 #define UAC_MIC_RECORD_USB_PLAY_CONFIG_FILE "/oem/usr/share/uac_app/mic_recode_usb_playback.json"
 
 typedef struct _UacStream {
-    pthread_mutex_t mutex;
     UacAudioConfig  config;
     RTUACGraph     *uac;
-} UacStream;
+} UacGraphStream;
 
 typedef struct _UACControlGraph {
-    UacStream     stream[UAC_STREAM_MAX];
+    int mode;
+    UacGraphStream stream;
 } UacControlGraph;
 
 UacControlGraph* getContextGraph(void* context) {
@@ -51,97 +51,79 @@ UacControlGraph* getContextGraph(void* context) {
     return ctx;
 }
 
-UACControlGraph::UACControlGraph() {
+UACControlGraph::UACControlGraph(int mode) {
     UacControlGraph *ctx= (UacControlGraph*)calloc(1, sizeof(UacControlGraph));
-    for (int i = 0; i < UAC_STREAM_MAX; i++) {
-        pthread_mutex_init(&ctx->stream[i].mutex, NULL);
-        ctx->stream[i].uac = NULL;
+    memset(ctx, 0, sizeof(UacControlGraph));
 
-        if (UAC_STREAM_PLAYBACK == i) {
-            ctx->stream[i].config.samplerate = 48000;
-        } else {
-            ctx->stream[i].config.samplerate = 48000;
-        }
-
-        ctx->stream[i].config.volume = 1.0;
-        ctx->stream[i].config.mute = 0;
-        ctx->stream[i].config.ppm = 0;
-    }
+    ctx->mode = mode;
+    ctx->stream.config.samplerate = 48000;
+    ctx->stream.config.floatVol = 1.0;
+    ctx->stream.config.mute = 0;
+    ctx->stream.config.ppm = 0;
 
     mCtx = reinterpret_cast<void *>(ctx);
 }
 
 UACControlGraph::~UACControlGraph() {
-    UacControlGraph* ctx = getContextGraph(mCtx);
+    UacControlGraph* ctx = reinterpret_cast<UacControlGraph *>(mCtx);
     if (ctx) {
-        for (int i = 0; i < UAC_STREAM_MAX; i++) {
-            if (ctx->stream[i].uac != NULL) {
-                delete(ctx->stream[i].uac);
-                ctx->stream[i].uac = NULL;
-            }
-            pthread_mutex_destroy(&ctx->stream[i].mutex);
+        if (ctx->stream.uac != NULL) {
+            delete(ctx->stream.uac);
+            ctx->stream.uac = NULL;
         }
         free(ctx);
         mCtx = RT_NULL;
     }
 }
 
-void UACControlGraph::uacSetSampleRate(int type, int sampleRate) {
-    ALOGD("type = %d, samplerate = %d\n", type, sampleRate);
-    UacControlGraph* ctx = getContextGraph(mCtx);
-    pthread_mutex_lock(&ctx->stream[type].mutex);
-    ctx->stream[type].config.samplerate = sampleRate;
-    RTUACGraph* uac = ctx->stream[type].uac;
+void UACControlGraph::uacSetSampleRate(int sampleRate) {
+    ALOGD("samplerate = %d\n", sampleRate);
+    UacControlGraph* ctx = reinterpret_cast<UacControlGraph *>(mCtx);
+    ctx->stream.config.samplerate = sampleRate;
+    RTUACGraph* uac = ctx->stream.uac;
     if (uac != NULL) {
-        graph_set_samplerate(uac, type, ctx->stream[type].config);
+        graph_set_samplerate(uac, ctx->mode, ctx->stream.config);
     }
-    pthread_mutex_unlock(&ctx->stream[type].mutex);
 }
 
-void UACControlGraph::uacSetVolume(int type, int volume) {
-    ALOGD("type = %d, volume = %d\n", type, volume);
-    UacControlGraph* ctx = getContextGraph(mCtx);
-    pthread_mutex_lock(&ctx->stream[type].mutex);
-    ctx->stream[type].config.volume = ((float)volume/100.0);
-    RTUACGraph* uac = ctx->stream[type].uac;
+void UACControlGraph::uacSetVolume(int volume) {
+    ALOGD("volume = %d\n", volume);
+    UacControlGraph* ctx = reinterpret_cast<UacControlGraph *>(mCtx);
+    ctx->stream.config.floatVol = ((float)volume/100.0);
+    RTUACGraph* uac = ctx->stream.uac;
     if (uac != NULL) {
-        graph_set_volume(uac, type, ctx->stream[type].config);
+        graph_set_volume(uac, ctx->mode, ctx->stream.config);
     }
-    pthread_mutex_unlock(&ctx->stream[type].mutex);
 }
 
-void UACControlGraph::uacSetMute(int type, int mute) {
-    ALOGD("type = %d, mute = %d\n", type, mute);
-    UacControlGraph* ctx = getContextGraph(mCtx);
-    pthread_mutex_lock(&ctx->stream[type].mutex);
-    ctx->stream[type].config.mute = mute;
-    RTUACGraph* uac = ctx->stream[type].uac;
+void UACControlGraph::uacSetMute(int mute) {
+    ALOGD("type = %d, mute = %d\n", mute);
+    UacControlGraph* ctx = reinterpret_cast<UacControlGraph *>(mCtx);
+    ctx->stream.config.mute = mute;
+    RTUACGraph* uac = ctx->stream.uac;
     if (uac != NULL) {
-        graph_set_volume(uac, type, ctx->stream[type].config);
+        graph_set_volume(uac, ctx->mode, ctx->stream.config);
     }
-    pthread_mutex_unlock(&ctx->stream[type].mutex);
 }
 
-void UACControlGraph::uacSetPpm(int type, int ppm) {
-    ALOGD("type = %d, ppm = %d\n", type, ppm);
-    UacControlGraph* ctx = getContextGraph(mCtx);
-    pthread_mutex_lock(&ctx->stream[type].mutex);
-    ctx->stream[type].config.mute = ppm;
-    RTUACGraph* uac = ctx->stream[type].uac;
+void UACControlGraph::uacSetPpm(int ppm) {
+    ALOGD("type = %d, ppm = %d\n", ppm);
+    UacControlGraph* ctx = reinterpret_cast<UacControlGraph *>(mCtx);
+    ctx->stream.config.ppm = ppm;
+    RTUACGraph* uac = ctx->stream.uac;
     if (uac != NULL) {
-        graph_set_ppm(uac, type, ctx->stream[type].config);
+        graph_set_ppm(uac, ctx->mode, ctx->stream.config);
     }
-    pthread_mutex_unlock(&ctx->stream[type].mutex);
 }
 
-int UACControlGraph::uacStart(int type) {
-    UacControlGraph* ctx = getContextGraph(mCtx);
+int UACControlGraph::uacStart() {
+    UacControlGraph* ctx = reinterpret_cast<UacControlGraph *>(mCtx);
 
-    uacStop(type);
+    uacStop();
 
     char* config = (char*)UAC_MIC_RECORD_USB_PLAY_CONFIG_FILE;
     char* name = (char*)"uac_playback";
-    if (type == UAC_STREAM_RECORD) {
+    if (ctx->mode == UAC_STREAM_RECORD) {
         name = (char*)"uac_record";
         config = (char*)UAC_USB_RECORD_SPK_PLAY_CONFIG_FILE;
     }
@@ -155,25 +137,21 @@ int UACControlGraph::uacStart(int type) {
     // default configs will be readed in json file
     uac->autoBuild(config);
     uac->prepare();
-    graph_set_volume(uac, type, ctx->stream[type].config);
-    graph_set_samplerate(uac, type, ctx->stream[type].config);
-    graph_set_ppm(uac, type, ctx->stream[type].config);
+    graph_set_volume(uac, ctx->mode, ctx->stream.config);
+    graph_set_samplerate(uac, ctx->mode, ctx->stream.config);
+    graph_set_ppm(uac, ctx->mode, ctx->stream.config);
     uac->start();
 
-    pthread_mutex_lock(&ctx->stream[type].mutex);
-    ctx->stream[type].uac = uac;
-    pthread_mutex_unlock(&ctx->stream[type].mutex);
+    ctx->stream.uac = uac;
 
     return 0;
 }
 
-void UACControlGraph::uacStop(int type) {
-    UacControlGraph* ctx = getContextGraph(mCtx);
-    ALOGD("type = %d\n", type); 
-    pthread_mutex_lock(&ctx->stream[type].mutex);
-    RTUACGraph *uac = ctx->stream[type].uac;
-    ctx->stream[type].uac = NULL;
-    pthread_mutex_unlock(&ctx->stream[type].mutex);
+void UACControlGraph::uacStop() {
+    UacControlGraph* ctx = reinterpret_cast<UacControlGraph *>(mCtx);
+    ALOGD("stop\n");
+    RTUACGraph *uac = ctx->stream.uac;
+    ctx->stream.uac = NULL;
 
     if (uac != NULL) {
         uac->stop();
