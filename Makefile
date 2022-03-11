@@ -20,7 +20,7 @@ RK_UAC_APP_CONFIG :=
 
 ifeq ($(RK_APP_CHIP), rv1106)
         ifeq ($(RK_APP_TYPE), UAC)
-                RK_UVC_APP_CONFIG := -DCOMPILE_FOR_MPI=ON
+                RK_UAC_APP_CONFIG := -DCOMPILE_FOR_MPI=ON
         else ifeq ($(RK_APP_TYPE), UVC_UAC)
                 RK_UAC_APP_CONFIG := -DCOMPILE_FOR_MPI=ON
         else
