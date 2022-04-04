@@ -20,8 +20,8 @@
 #include "uac_common_def.h"
 
 enum UacApiType {
-    UAC_API_MPI   = 0,
-    UAC_API_GRAPH = 1,
+    UAC_API_MPI     = 0,
+    UAC_API_GRAPH   = 1,
     UAC_API_MAX
 };
 

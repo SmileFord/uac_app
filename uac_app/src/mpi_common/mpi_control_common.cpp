@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Rockchip Electronics Co. LTD
+ * Copyright 2022 Rockchip Electronics Co. LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +16,12 @@
  */
 
 #include "uac_log.h"
-#include "mpi_control.h"
+#include "mpi_control_common.h"
 
 #ifdef LOG_TAG
 #undef LOG_TAG
-#define LOG_TAG "mpi_contol"
-#endif // LOG_TAG
+#define LOG_TAG "mpi_contol_comm"
+#endif
 
 typedef struct _MpiAioDeviceAttrConfigMap {
     UacMpiType mpiType;
@@ -32,29 +32,47 @@ typedef struct _MpiAioDeviceAttrConfigMap {
     RK_U32             sndCardSampleRate;
     AUDIO_BIT_WIDTH_E  sndCardbitWidth;
 
-    AUDIO_SAMPLE_RATE_E dataSamplerate;
+    RK_U32              dataSamplerate;
     AUDIO_BIT_WIDTH_E   dataBitwidth;
     AUDIO_SOUND_MODE_E  dataSoundmode;
 } MpiAioDeviceAttrConfigMap;
+
+typedef struct _MpiAfChnAttrConfigMap {
+    const char *cfgPath;
+    RK_U32 u32SampleRate;
+    RK_U32 u32Channels;
+    RK_U32 u32ChnLayout;
+    RK_U32 u32RefLayout;
+    RK_U32 u32RecLayout;
+} MpiAfVqeChnAttrConfigMap;
 
 const static MpiAioDeviceAttrConfigMap sAioDevAttrCfgs[] = {
     // usb
     { UAC_MPI_TYPE_AI, UAC_STREAM_RECORD,
                     "hw:1,0", 2, 44100, AUDIO_BIT_WIDTH_16,
-                    AUDIO_SAMPLE_RATE_44100, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO},
+                    44100, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO},
     // mic
     { UAC_MPI_TYPE_AI, UAC_STREAM_PLAYBACK,
-                    "hw:0,0", 2, 16000, AUDIO_BIT_WIDTH_16,
-                    AUDIO_SAMPLE_RATE_16000, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO},
+                    "hw:0,0", 2, 48000, AUDIO_BIT_WIDTH_16,
+                    48000, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO},
     // spk
     { UAC_MPI_TYPE_AO, UAC_STREAM_RECORD,
-                    "hw:0,0", 2, 16000, AUDIO_BIT_WIDTH_16,
-                    AUDIO_SAMPLE_RATE_16000, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO},
+                    "hw:0,0", 2, 48000, AUDIO_BIT_WIDTH_16,
+                    48000, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO},
     // usb
     { UAC_MPI_TYPE_AO, UAC_STREAM_PLAYBACK,
                     "hw:1,0", 2, 44100, AUDIO_BIT_WIDTH_16,
-                    AUDIO_SAMPLE_RATE_44100, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO},
+                    44100, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO },
 };
+
+const static MpiAfVqeChnAttrConfigMap sAfAttrCfgs[] = {
+    { "oem/usr/share/uac_app/configs_skv.json", 16000, 2, 3, 0, 3 },
+};
+
+RK_U32 UacMpiUtil::getSndCardSampleRate(UacMpiType type, int mode) {
+    GET_ENTRY_VALUE(type, mode, sAioDevAttrCfgs, mpiType, uacMode, sndCardSampleRate);
+    return 0;
+}
 
 const char* UacMpiUtil::getSndCardName(UacMpiType type, int mode) {
     GET_ENTRY_VALUE(type, mode, sAioDevAttrCfgs, mpiType, uacMode, sndCardname);
@@ -66,29 +84,56 @@ RK_U32 UacMpiUtil::getSndCardChannels(UacMpiType type, int mode) {
     return 0;
 }
 
-RK_U32 UacMpiUtil::getSndCardSampleRate(UacMpiType type, int mode) {
-    GET_ENTRY_VALUE(type, mode, sAioDevAttrCfgs, mpiType, uacMode, sndCardSampleRate);
-    return 0;
-}
-
 AUDIO_BIT_WIDTH_E UacMpiUtil::getSndCardbitWidth(UacMpiType type, int mode) {
     GET_ENTRY_VALUE(type, mode, sAioDevAttrCfgs, mpiType, uacMode, sndCardbitWidth);
     return AUDIO_BIT_WIDTH_BUTT;
 }
 
-AUDIO_SAMPLE_RATE_E UacMpiUtil::getDataSamplerate(UacMpiType type, int mode){
+RK_U32 UacMpiUtil::getDataSamplerate(UacMpiType type, int mode) {
     GET_ENTRY_VALUE(type, mode, sAioDevAttrCfgs, mpiType, uacMode, dataSamplerate);
-    return AUDIO_SAMPLE_RATE_BUTT;
+    return 0;
 }
 
-AUDIO_BIT_WIDTH_E UacMpiUtil::getDataBitwidth(UacMpiType type, int mode){
+AUDIO_BIT_WIDTH_E UacMpiUtil::getDataBitwidth(UacMpiType type, int mode) {
     GET_ENTRY_VALUE(type, mode, sAioDevAttrCfgs, mpiType, uacMode, dataBitwidth);
     return AUDIO_BIT_WIDTH_BUTT;
 }
 
-AUDIO_SOUND_MODE_E UacMpiUtil::getDataSoundmode(UacMpiType type, int mode){
+AUDIO_SOUND_MODE_E UacMpiUtil::getDataSoundmode(UacMpiType type, int mode) {
     GET_ENTRY_VALUE(type, mode, sAioDevAttrCfgs, mpiType, uacMode, dataSoundmode);
     return AUDIO_SOUND_MODE_BUTT;
+}
+
+const char* UacMpiUtil::getVqeCfgPath() {
+    return sAfAttrCfgs[0].cfgPath;
+}
+
+RK_U32 UacMpiUtil::getVqeSampleRate() {
+    return sAfAttrCfgs[0].u32SampleRate;
+}
+
+RK_U32 UacMpiUtil::getVqeChannels() {
+    return sAfAttrCfgs[0].u32Channels;
+}
+
+RK_U32 UacMpiUtil::getVqeChnLayout() {
+    return sAfAttrCfgs[0].u32ChnLayout;
+}
+
+RK_U32 UacMpiUtil::getVqeRefLayout() {
+    return sAfAttrCfgs[0].u32RefLayout;
+}
+
+RK_U32 UacMpiUtil::getVqeRecLayout() {
+    return sAfAttrCfgs[0].u32RecLayout;
+}
+
+void mpi_sys_init() {
+    RK_MPI_SYS_Init();
+}
+
+void mpi_sys_destrory() {
+    RK_MPI_SYS_Exit();
 }
 
 void mpi_set_samplerate(int type, UacMpiStream& streamCfg) {

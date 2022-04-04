@@ -14,26 +14,15 @@
  * limitations under the License.
  *
  */
-#ifndef SRC_INCLUDE_UAC_CONTROL_GRAPH_H_
-#define SRC_INCLUDE_UAC_CONTROL_GRAPH_H_
 
-#include "uac_control.h"
+#include "uac_common_def.h"
 
-class UACControlGraph : public UACControl {
- public:
-    UACControlGraph(int mode);
-    virtual ~UACControlGraph();
+uint64_t getRelativeTimeMs() {
+    return getRelativeTimeUs()/1000;    /* milliseconds */
+}
 
- public:
-    virtual int uacStart();
-    virtual void uacStop();
-    virtual void uacSetSampleRate(int sampleRate);
-    virtual void uacSetVolume(int volume);
-    virtual void uacSetMute(int mute);
-    virtual void uacSetPpm(int ppm);
-
- private:
-    void *mCtx;
-};
-
-#endif  // SRC_INCLUDE_UAC_CONTROL_GRAPH_H_
+uint64_t getRelativeTimeUs() {
+    struct timespec time = {0, 0};
+    clock_gettime(CLOCK_MONOTONIC, &time);
+    return (uint64_t)time.tv_sec * 1000000LL + (uint64_t)time.tv_nsec / 1000; /* microseconds */
+}

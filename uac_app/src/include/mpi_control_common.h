@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Rockchip Electronics Co. LTD
+ * Copyright 2022 Rockchip Electronics Co. LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,18 +24,38 @@
 #include <rk_mpi_ao.h>
 #include <rk_mpi_ai.h>
 #include <rk_comm_aio.h>
+#include <rk_comm_af.h>
+#include <rk_mpi_af.h>
+
+#define UAC_MPI_ENABLE (1 << 1)
 
 typedef enum _UacMpiType {
-    UAC_MPI_TYPE_AI = 0,
-    UAC_MPI_TYPE_AO = 1,
+    UAC_MPI_TYPE_AI     = 0,
+    UAC_MPI_TYPE_AO     = 1,
+    UAC_MPI_TYPE_AF_VQE = 2,
     UAC_MPI_TYPE_MAX
 } UacMpiType;
+
+typedef enum _UacMpiAODevId {
+    AO_USB_DEV,    // ao[0]
+    AO_SPK_DEV,    // ao[1]
+} UacMpiAODevId;
+
+typedef enum _UacMpiAIDevId {
+    AI_MIC_DEV,    // ai[0]
+    AI_USB_DEV,    // ai[1]
+} UacMpiAIDevId;
+
+typedef enum _UacMpiVqeDevId {
+    AF_VQE_CHN,    // afVqe[0]
+} UacMpiVqeDevId;
 
 typedef struct _UacMpiIdConfig {
     AUDIO_DEV aoDevId;
     AUDIO_DEV aiDevId;
     AO_CHN    aoChnId;
     AI_CHN    aiChnId;
+    AF_CHN    vqeChnId;
 } UacMpiIdConfig;
 
 typedef struct _UacMpiStream {
@@ -50,11 +70,19 @@ class UacMpiUtil {
     static RK_U32 getSndCardChannels(UacMpiType type, int mode);
     static RK_U32 getSndCardSampleRate(UacMpiType type, int mode);
     static AUDIO_BIT_WIDTH_E getSndCardbitWidth(UacMpiType type, int mode);
-    static AUDIO_SAMPLE_RATE_E getDataSamplerate(UacMpiType type, int mode);
+    static RK_U32 getDataSamplerate(UacMpiType type, int mode);
     static AUDIO_BIT_WIDTH_E getDataBitwidth(UacMpiType type, int mode);
     static AUDIO_SOUND_MODE_E getDataSoundmode(UacMpiType type, int mode);
+    static const char* getVqeCfgPath();
+    static RK_U32 getVqeSampleRate();
+    static RK_U32 getVqeChannels();
+    static RK_U32 getVqeChnLayout();
+    static RK_U32 getVqeRefLayout();
+    static RK_U32 getVqeRecLayout();
 };
 
+void mpi_sys_init();
+void mpi_sys_destrory();
 void mpi_set_samplerate(int type, UacMpiStream& streamCfg);
 void mpi_set_volume(int type, UacMpiStream& streamCfg);
 void mpi_set_ppm(int type, UacMpiStream& streamCfg);

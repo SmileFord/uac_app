@@ -52,7 +52,7 @@
 #ifdef LOG_TAG
 #undef LOG_TAG
 #define LOG_TAG "audio_event"
-#endif // LOG_TAG
+#endif
 
 /*
  * case 1:

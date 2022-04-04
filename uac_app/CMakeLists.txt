@@ -23,7 +23,7 @@ if (${UAC_MPI})
     add_definitions(-DUAC_MPI)
     set(SOURCE_FILES_MPI
         src/mpi/uac_control_mpi.cpp
-        src/mpi/mpi_control.cpp
+        src/mpi_common/mpi_control_common.cpp
     )
     message(STATUS "Build With Rockit Mpi")
 else()
@@ -33,6 +33,8 @@ endif()
 set(LIB_SOURCE
     src/uevent.cpp
     src/uac_control.cpp
+    src/uac_common_def.cpp
+    src/uac_control_factory.cpp
     ${SOURCE_FILES_GRAPH}
     ${SOURCE_FILES_MPI}
 )
@@ -51,7 +53,7 @@ set(UAC_APP_DEPENDENT_LIBS
 )
 
 #set(UAC_AUDIO_ALGORITHM
-#    ${CMAKE_CURRENT_LIST_DIR}/libs/libanr.so)
+#    ${CMAKE_CURRENT_LIST_DIR}/libs/libaec_bf_process.so)
 #install(FILES ${UAC_AUDIO_ALGORITHM} DESTINATION lib)
 
 ADD_EXECUTABLE(uac_app ${SOURCE})
@@ -65,7 +67,7 @@ option(ENABLE_DEMO_BOARD  "use demo board conf" OFF)
 if (${ENABLE_DEMO_BOARD})
     install(DIRECTORY configs/demo/ DESTINATION share/uac_app FILES_MATCHING PATTERN "*.json")
 else()
-    install(DIRECTORY configs/ DESTINATION share/uac_app FILES_MATCHING PATTERN "*.json")
+    install(DIRECTORY configs/ DESTINATION share/uac_app FILES_MATCHING PATTERN "configs_skv.json")
 endif()
 
 install(TARGETS uac_app DESTINATION bin)

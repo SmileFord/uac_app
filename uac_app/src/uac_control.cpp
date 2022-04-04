@@ -16,9 +16,11 @@
  */
 
 #include "uac_log.h"
-#include "uac_control_mpi.h"
-#include "uac_control_graph.h"
 #include "uac_control.h"
+#include "uac_control_factory.h"
+#ifdef UAC_MPI
+#include "mpi_control_common.h"
+#endif
 
 typedef struct _UacControls {
     int mode;
@@ -28,7 +30,15 @@ typedef struct _UacControls {
 
 static UacControls *gUAControl = NULL;
 int uac_control_create(int type) {
-    ALOGD("-------------uac use %s--------------\n", type == 0 ? "mpi" : "graph");
+    int i = 0;
+    char *ch = NULL;
+    if (type == UAC_API_GRAPH) {
+        ch = (char*)"graph";
+    } else if (type == UAC_API_MPI) {
+        ch = (char*)"mpi";
+    }
+
+    ALOGD("-------------uac use %s--------------\n", ch);
     if (!gUAControl) {
         uac_control_destory();
     }
@@ -37,7 +47,6 @@ int uac_control_create(int type) {
     mpi_sys_init();
 #endif
 
-    int i = 0;
     gUAControl = (UacControls*)calloc(UAC_STREAM_MAX, sizeof(UacControls));
     if (!gUAControl) {
         ALOGE("fail to malloc memory!\n");
@@ -48,15 +57,8 @@ int uac_control_create(int type) {
     for (i = 0; i < UAC_STREAM_MAX; i++) {
         gUAControl[i].mode = i;
         pthread_mutex_init(&gUAControl[i].mutex, NULL);
-        if (type == UAC_API_MPI) {
-#ifdef UAC_MPI
-            gUAControl[i].uac = new UACControlMpi(i);
-#endif
-        } else if (type == UAC_API_GRAPH) {
-#ifdef UAC_GRAPH
-            gUAControl[i].uac = new UACControlGraph(i);
-#endif
-        }
+
+        gUAControl[i].uac = UacControlFactory::create((UacApiType)type, i);
         if (!gUAControl[i].uac) {
             uac_control_destory();
             return -1;
@@ -82,7 +84,7 @@ void uac_control_destory() {
 
     free(gUAControl);
     gUAControl = NULL;
-    
+
 #ifdef UAC_MPI
     mpi_sys_destrory();
 #endif

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Rockchip Electronics Co. LTD
+ * Copyright 2022 Rockchip Electronics Co. LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,38 +16,20 @@
  */
 
 #include "uac_log.h"
-#include "mpi_control.h"
+#include "mpi_control_common.h"
 #include "uac_control_mpi.h"
 
 #ifdef LOG_TAG
 #undef LOG_TAG
 #define LOG_TAG "uac_mpi"
-#endif // LOG_TAG
+#endif
 
-#define UAC_MPI_ENABLE (1 << 1)
+#define OPEN_VQE 1
 
-typedef enum _UacMpiAODevId {
-    AO_USB_DEV,    // ao[0]
-    AO_SPK_DEV,    // ao[1]
-} UacMpiAODevId;
-
-typedef enum _UacMpiAIDevId {
-    AI_MIC_DEV,    // ai[0]
-    AI_USB_DEV,    // ai[1]
-} UacMpiAIDevId;
-
-typedef struct _UACControlGraph {
+typedef struct _UacControlMpi {
     int mode;
     UacMpiStream stream;
 } UacControlMpi;
-
-void mpi_sys_init() {
-    RK_MPI_SYS_Init();
-}
-
-void mpi_sys_destrory() {
-    RK_MPI_SYS_Exit();
-}
 
 UacControlMpi* getContextMpi(void* context) {
     UacControlMpi* ctx = reinterpret_cast<UacControlMpi *>(context);
@@ -86,7 +68,7 @@ UACControlMpi::~UACControlMpi() {
 }
 
 void UACControlMpi::uacSetSampleRate(int sampleRate) {
-    UacControlMpi* ctx = reinterpret_cast<UacControlMpi *>(mCtx);
+    UacControlMpi* ctx = getContextMpi(mCtx);
     ctx->stream.config.samplerate = sampleRate;
     ALOGD("mode = %d, sampleRate = %d\n", ctx->mode, sampleRate);
     if ((ctx->stream.flag &= UAC_MPI_ENABLE) == UAC_MPI_ENABLE) {
@@ -95,7 +77,7 @@ void UACControlMpi::uacSetSampleRate(int sampleRate) {
 }
 
 void UACControlMpi::uacSetVolume(int volume) {
-    UacControlMpi* ctx = reinterpret_cast<UacControlMpi *>(mCtx);
+    UacControlMpi* ctx = getContextMpi(mCtx);
     ALOGD("mode = %d, volume = %d\n", ctx->mode, volume);
     ctx->stream.config.intVol = volume;
     if ((ctx->stream.flag &= UAC_MPI_ENABLE) == UAC_MPI_ENABLE) {
@@ -104,7 +86,7 @@ void UACControlMpi::uacSetVolume(int volume) {
 }
 
 void UACControlMpi::uacSetMute(int mute) {
-    UacControlMpi* ctx = reinterpret_cast<UacControlMpi *>(mCtx);
+    UacControlMpi* ctx = getContextMpi(mCtx);
     ALOGD("mode = %d, mute = %d\n", ctx->mode, mute);
     ctx->stream.config.mute = mute;
     if ((ctx->stream.flag &= UAC_MPI_ENABLE) == UAC_MPI_ENABLE) {
@@ -114,7 +96,7 @@ void UACControlMpi::uacSetMute(int mute) {
 
 void UACControlMpi::uacSetPpm(int ppm) {
     ALOGD("ppm = %d\n", ppm);
-    UacControlMpi* ctx = reinterpret_cast<UacControlMpi *>(mCtx);
+    UacControlMpi* ctx = getContextMpi(mCtx);
     ctx->stream.config.ppm = ppm;
     if ((ctx->stream.flag &= UAC_MPI_ENABLE) == UAC_MPI_ENABLE) {
         mpi_set_ppm(ctx->mode, ctx->stream);
@@ -124,10 +106,22 @@ void UACControlMpi::uacSetPpm(int ppm) {
 int UACControlMpi::uacStart() {
     uacStop();
     int ret = 0;
-    UacControlMpi* ctx = reinterpret_cast<UacControlMpi *>(mCtx);
+    UacControlMpi* ctx = getContextMpi(mCtx);
     ret = startAi();
     if (ret != 0) {
         goto __FAILED;
+    }
+
+    /*
+     * only add 3A process in playback(data flow: 1106's mic-->pc/host),
+     * do not add 3A process in record(data flow: pc/host-->1106's spk )
+     * for avoid sound like music process by 3A
+     */
+    if (OPEN_VQE && ctx->mode == UAC_STREAM_PLAYBACK) {
+        ret = startVqe();
+        if (ret != 0) {
+            goto __FAILED;
+        }
     }
 
     ret = startAo();
@@ -139,7 +133,7 @@ int UACControlMpi::uacStart() {
     mpi_set_volume(ctx->mode, ctx->stream);
     mpi_set_ppm(ctx->mode, ctx->stream);
 
-    AiBindAo();
+    streamBind();
     ctx->stream.flag |= UAC_MPI_ENABLE;
     return 0;
 
@@ -148,18 +142,21 @@ __FAILED:
 }
 
 void UACControlMpi::uacStop() {
-    UacControlMpi* ctx = reinterpret_cast<UacControlMpi *>(mCtx);
+    UacControlMpi* ctx = getContextMpi(mCtx);
     ALOGD("stop mode = %d, flag = %d\n", ctx->mode, ctx->stream.flag);
     if ((ctx->stream.flag &= UAC_MPI_ENABLE) == UAC_MPI_ENABLE) {
-       AiUnBindAo();
+       streamUnBind();
        stopAi();
+       if (OPEN_VQE && ctx->mode == UAC_STREAM_PLAYBACK) {
+           stopVqe();
+       }
        stopAo();
        ctx->stream.flag &= (~UAC_MPI_ENABLE);
     }
 }
 
 int UACControlMpi::startAi() {
-    UacControlMpi* ctx = reinterpret_cast<UacControlMpi *>(mCtx);
+    UacControlMpi* ctx = getContextMpi(mCtx);
     AUDIO_DEV aiDevId = ctx->stream.idCfg.aiDevId;
     AI_CHN aiChn = ctx->stream.idCfg.aiChnId;
     ALOGD("this:%p, startAi(dev:%d, chn:%d), mode : %d\n", this, aiDevId, aiChn, ctx->mode);
@@ -182,7 +179,11 @@ int UACControlMpi::startAi() {
           we use the a fix samplerate like 16000.
      */
     if (ctx->mode == UAC_STREAM_PLAYBACK) {
-        rate = (AUDIO_SAMPLE_RATE_E)UacMpiUtil::getSndCardSampleRate(UAC_MPI_TYPE_AI, ctx->mode);
+        if (OPEN_VQE) {
+            rate = (AUDIO_SAMPLE_RATE_E)UacMpiUtil::getVqeSampleRate();
+        } else {
+            rate = (AUDIO_SAMPLE_RATE_E)UacMpiUtil::getSndCardSampleRate(UAC_MPI_TYPE_AI, ctx->mode);
+        }
     } else {
         rate = (AUDIO_SAMPLE_RATE_E)ctx->stream.config.samplerate;
     }
@@ -197,26 +198,69 @@ int UACControlMpi::startAi() {
     aiAttr.u32ChnCnt = 2;
     result = RK_MPI_AI_SetPubAttr(aiDevId, &aiAttr);
     if (result != 0) {
-        RK_LOGE("ai set attr(dev:%d) fail, reason = %x", aiDevId, result);
+        ALOGE("ai set attr(dev:%d) fail, reason = %x\n", aiDevId, result);
         goto __FAILED;
     }
 
     result = RK_MPI_AI_Enable(aiDevId);
     if (result != 0) {
-        RK_LOGE("ai enable(dev:%d) fail, reason = %x", aiDevId, result);
+        ALOGE("ai enable(dev:%d) fail, reason = %x\n", aiDevId, result);
         goto __FAILED;
     }
 
     result = RK_MPI_AI_EnableChn(aiDevId, aiChn);
     if (result != 0) {
-        RK_LOGE("ai enable channel(dev:%d, chn:%d) fail, reason = %x", aiDevId, aiChn, result);
+        ALOGE("ai enable channel(dev:%d, chn:%d) fail, reason = %x\n", aiDevId, aiChn, result);
         return RK_FAILURE;
     }
 
-    // disable resample in ai, this means the samplerate of output of ai is the samplerate of sound card
-    result = RK_MPI_AI_DisableReSmp(aiDevId, aiChn);
-    if (result != 0) {
-        RK_LOGE("ai disable resample(dev:%d, chn:%d) fail, reason = %x", aiDevId, aiChn, result);
+    /*
+     * If 3A filter is after ai, and the samplerate of ai's datas is not support by 3A,
+     * enable resample to convert the samplerate.
+     */
+    if (OPEN_VQE && ctx->mode == UAC_STREAM_PLAYBACK) {
+        result = RK_MPI_AI_EnableReSmp(aiDevId, aiChn, aiAttr.enSamplerate);
+        if (result != 0) {
+            ALOGE("ai enable resample(dev:%d, chn:%d) fail, reason = %x\n", aiDevId, aiChn, result);
+            return RK_FAILURE;
+        }
+    } else {
+        // disable resample in ai, this means the samplerate of output of ai is the samplerate of sound card
+        result = RK_MPI_AI_DisableReSmp(aiDevId, aiChn);
+        if (result != 0) {
+            ALOGE("ai disable resample(dev:%d, chn:%d) fail, reason = %x\n", aiDevId, aiChn, result);
+            return RK_FAILURE;
+        }
+    }
+    return 0;
+__FAILED:
+    return -1;
+}
+
+// init 3A filter
+int UACControlMpi::startVqe() {
+    UacControlMpi* ctx = getContextMpi(mCtx);
+    AF_CHN vqeChnId = ctx->stream.idCfg.vqeChnId;
+    RK_S32 result;
+    AF_ATTR_S attr;
+    ALOGD("this:%p, startVqe(chn:%d), mode : %d\n", this, vqeChnId, ctx->mode);
+    memset(&attr, 0, sizeof(AF_ATTR_S));
+
+    attr.enType = AUDIO_FILTER_3A;
+    attr.u32InBufCount  = 2;
+    attr.u32OutBufCount = 2;
+
+    snprintf(reinterpret_cast<char *>(attr.st3AAttr.cfgPath),
+             sizeof(attr.st3AAttr.cfgPath), "%s", UacMpiUtil::getVqeCfgPath());
+    attr.st3AAttr.u32SampleRate = UacMpiUtil::getVqeSampleRate();
+    attr.st3AAttr.enBitWidth = AUDIO_BIT_WIDTH_16;
+    attr.st3AAttr.u32Channels = UacMpiUtil::getVqeChannels();
+    attr.st3AAttr.u32ChnLayout = UacMpiUtil::getVqeChnLayout();
+    attr.st3AAttr.u32RecLayout = UacMpiUtil::getVqeRecLayout();
+    attr.st3AAttr.u32RefLayout = UacMpiUtil::getVqeRefLayout();
+    result = RK_MPI_AF_Create(vqeChnId, &attr);
+    if (result != RK_SUCCESS) {
+        ALOGE("create af vqe(chn:%d) fail, reason = %x\n", vqeChnId, result);
         return RK_FAILURE;
     }
 
@@ -226,13 +270,15 @@ __FAILED:
 }
 
 int UACControlMpi::startAo() {
-    UacControlMpi* ctx = reinterpret_cast<UacControlMpi *>(mCtx);
+    UacControlMpi* ctx = getContextMpi(mCtx);
     AUDIO_DEV aoDevId = ctx->stream.idCfg.aoDevId;
     AO_CHN aoChn = ctx->stream.idCfg.aoChnId;
     ALOGD("this:%p, startAo(dev:%d, chn:%d), mode : %d\n", this, aoDevId, aoChn, ctx->mode);
     const char *cardName = RK_NULL;
     RK_S32 result;
     AIO_ATTR_S aoAttr;
+    AUDIO_SAMPLE_RATE_E rate;
+    AUDIO_SOUND_MODE_E  soundMode;
     memset(&aoAttr, 0, sizeof(AIO_ATTR_S));
 
     cardName = UacMpiUtil::getSndCardName(UAC_MPI_TYPE_AO, ctx->mode);
@@ -244,7 +290,6 @@ int UACControlMpi::startAo() {
      * 2. if datas is from uac device to pc, the ao device is usb,
      *    we set the samplerate which uevent report.
      */
-    AUDIO_SAMPLE_RATE_E rate;
     if (ctx->mode == UAC_STREAM_RECORD) {
         rate = (AUDIO_SAMPLE_RATE_E)UacMpiUtil::getSndCardSampleRate(UAC_MPI_TYPE_AO, ctx->mode);
     } else {
@@ -256,8 +301,15 @@ int UACControlMpi::startAo() {
     aoAttr.soundCard.bitWidth = UacMpiUtil::getSndCardbitWidth(UAC_MPI_TYPE_AO, ctx->mode);
 
     aoAttr.enBitwidth = UacMpiUtil::getDataBitwidth(UAC_MPI_TYPE_AO, ctx->mode);
+    if (OPEN_VQE && ctx->mode == UAC_STREAM_PLAYBACK) {
+        rate = (AUDIO_SAMPLE_RATE_E)UacMpiUtil::getVqeSampleRate();
+    }
     aoAttr.enSamplerate = rate;
-    aoAttr.enSoundmode = UacMpiUtil::getDataSoundmode(UAC_MPI_TYPE_AO, ctx->mode);
+    soundMode = UacMpiUtil::getDataSoundmode(UAC_MPI_TYPE_AO, ctx->mode);
+    if (OPEN_VQE && ctx->mode == UAC_STREAM_PLAYBACK) {
+        soundMode = AUDIO_SOUND_MODE_MONO;
+    }
+    aoAttr.enSoundmode = soundMode;
     ALOGD("this:%p, startAo(dev:%d, chn:%d), mode : %d, enSamplerate = %d\n", 
         this, aoDevId, aoChn, ctx->mode, aoAttr.enSamplerate);
     aoAttr.u32FrmNum = 4;
@@ -266,25 +318,98 @@ int UACControlMpi::startAo() {
     aoAttr.u32ChnCnt = 2;
     result = RK_MPI_AO_SetPubAttr(aoDevId, &aoAttr);
     if (result != 0) {
-        RK_LOGE("ai set attr(dev:%d) fail, reason = %x", aoDevId, result);
+        ALOGE("ao set attr(dev:%d) fail, reason = %x\n", aoDevId, result);
         goto __FAILED;
     }
 
     result = RK_MPI_AO_Enable(aoDevId);
     if (result != 0) {
-        RK_LOGE("ai enable(dev:%d) fail, reason = %x", aoDevId, result);
+        ALOGE("ao enable(dev:%d) fail, reason = %x\n", aoDevId, result);
         goto __FAILED;
     }
 
     result = RK_MPI_AO_EnableChn(aoDevId, aoChn);
     if (result != 0) {
-        RK_LOGE("ao enable channel(dev:%d, chn:%d) fail, reason = %x", aoDevId, aoChn, result);
+        ALOGE("ao enable channel(dev:%d, chn:%d) fail, reason = %x\n", aoDevId, aoChn, result);
         return RK_FAILURE;
     }
 
     result = RK_MPI_AO_EnableReSmp(aoDevId, aoChn, aoAttr.enSamplerate);
     if (result != 0) {
-        RK_LOGE("ao enable resample(dev:%d, chn:%d) fail, reason = %x", aoDevId, aoChn, result);
+        ALOGE("ao enable resample(dev:%d, chn:%d) fail, reason = %x\n", aoDevId, aoChn, result);
+        return RK_FAILURE;
+    }
+
+    if (OPEN_VQE && ctx->mode == UAC_STREAM_PLAYBACK) {
+        result = RK_MPI_AO_SetTrackMode(aoDevId, AUDIO_TRACK_OUT_STEREO);
+        if (result != 0) {
+            ALOGE("ao enable track mode(dev:%d, chn:%d) fail, reason = %x\n", aoDevId, aoChn, result);
+            return RK_FAILURE;
+        }
+    }
+    return 0;
+__FAILED:
+    return -1;
+}
+
+void UACControlMpi::streamBind() {
+    UacControlMpi* ctx = getContextMpi(mCtx);
+    MPP_CHN_S stSrcChn, stDstChn;
+    // have af, the data flow is ai-->af-->ao
+    if (OPEN_VQE && ctx->mode == UAC_STREAM_PLAYBACK) {
+        // ai bind af, this means data from ai to af
+        stSrcChn.enModId = RK_ID_AI;
+        stSrcChn.s32DevId = ctx->stream.idCfg.aiDevId;
+        stSrcChn.s32ChnId = ctx->stream.idCfg.aiChnId;
+
+        stDstChn.enModId = RK_ID_AF;
+        stDstChn.s32DevId = 0;
+        stDstChn.s32ChnId = ctx->stream.idCfg.vqeChnId;
+        ALOGD("AiBindVqe(mode:%d) : src(%d,%d), dst(%d,%d)\n", ctx->mode, stSrcChn.s32DevId,
+               stSrcChn.s32ChnId,stDstChn.s32DevId,stDstChn.s32ChnId);
+        RK_MPI_SYS_Bind(&stSrcChn, &stDstChn);
+
+        // af bind ao, this means data from af to ao
+        stSrcChn.enModId = RK_ID_AF;
+        stSrcChn.s32DevId = 0;
+        stSrcChn.s32ChnId = ctx->stream.idCfg.vqeChnId;
+
+        stDstChn.enModId = RK_ID_AO;
+        stDstChn.s32DevId = ctx->stream.idCfg.aoDevId;
+        stDstChn.s32ChnId = ctx->stream.idCfg.aoChnId;
+        ALOGD("VqeBindAo(mode:%d) : src(%d,%d), dst(%d,%d)\n", ctx->mode, stSrcChn.s32DevId,
+               stSrcChn.s32ChnId,stDstChn.s32DevId,stDstChn.s32ChnId);
+        RK_MPI_SYS_Bind(&stSrcChn, &stDstChn);
+    } else {
+        // no af, the data flow is ai-->ao
+        stSrcChn.enModId = RK_ID_AI;
+        stSrcChn.s32DevId = ctx->stream.idCfg.aiDevId;
+        stSrcChn.s32ChnId = ctx->stream.idCfg.aiChnId;
+
+        stDstChn.enModId = RK_ID_AO;
+        stDstChn.s32DevId = ctx->stream.idCfg.aoDevId;
+        stDstChn.s32ChnId = ctx->stream.idCfg.aoChnId;
+        ALOGD("AiBindAO(mode:%d) : src(%d,%d), dst(%d,%d)\n", ctx->mode, stSrcChn.s32DevId,
+               stSrcChn.s32ChnId,stDstChn.s32DevId,stDstChn.s32ChnId);
+        RK_MPI_SYS_Bind(&stSrcChn, &stDstChn);
+    }
+}
+
+int UACControlMpi::stopAi() {
+    UacControlMpi* ctx = getContextMpi(mCtx);
+    AUDIO_DEV aiDevId = ctx->stream.idCfg.aiDevId;
+    AI_CHN aiChn = ctx->stream.idCfg.aiChnId;
+    ALOGD("this:%p, stopAi(dev:%d, chn:%d), mode : %d\n", this, aiDevId, aiChn, ctx->mode);
+    RK_MPI_AI_DisableReSmp(aiDevId, aiChn);
+    RK_S32 result = RK_MPI_AI_DisableChn(aiDevId, aiChn);
+    if (result != 0) {
+        ALOGE("ai disable channel(dev:%d, chn:%d) fail, reason = %x\n", aiDevId, aiChn, result);
+        return RK_FAILURE;
+    }
+
+    result =  RK_MPI_AI_Disable(aiDevId);
+    if (result != 0) {
+        ALOGE("ai disable(dev:%d) fail, reason = %x\n", aiDevId, result);
         return RK_FAILURE;
     }
 
@@ -293,34 +418,13 @@ __FAILED:
     return -1;
 }
 
-void UACControlMpi::AiBindAo() {
-    UacControlMpi* ctx = reinterpret_cast<UacControlMpi *>(mCtx);
-    MPP_CHN_S stSrcChn, stDstChn;
-    stSrcChn.enModId = RK_ID_AI;
-    stSrcChn.s32DevId = ctx->stream.idCfg.aiDevId;
-    stSrcChn.s32ChnId = ctx->stream.idCfg.aiChnId;
-
-    stDstChn.enModId = RK_ID_AO;
-    stDstChn.s32DevId = ctx->stream.idCfg.aoDevId;
-    stDstChn.s32ChnId = ctx->stream.idCfg.aoChnId;
-    RK_MPI_SYS_Bind(&stSrcChn, &stDstChn);
-}
-
-int UACControlMpi::stopAi() {
-    UacControlMpi* ctx = reinterpret_cast<UacControlMpi *>(mCtx);
-    AUDIO_DEV aiDevId = ctx->stream.idCfg.aiDevId;
-    AI_CHN aiChn = ctx->stream.idCfg.aiChnId;
-    ALOGD("this:%p, stopAi(dev:%d, chn:%d), mode : %d\n", this, aiDevId, aiChn, ctx->mode);
-    RK_MPI_AI_DisableReSmp(aiDevId, aiChn);
-    RK_S32 result = RK_MPI_AI_DisableChn(aiDevId, aiChn);
+int UACControlMpi::stopVqe() {
+    UacControlMpi* ctx = getContextMpi(mCtx);
+    AF_CHN vqeChn = ctx->stream.idCfg.vqeChnId;
+    ALOGD("this:%p, stopVqe(chn:%d), mode : %d\n", this, vqeChn, ctx->mode);
+    RK_S32 result =  RK_MPI_AF_Destroy(vqeChn);
     if (result != 0) {
-        RK_LOGE("ai disable channel(dev:%d, chn:%d) fail, reason = %x", aiDevId, aiChn, result);
-        return RK_FAILURE;
-    }
-
-    result =  RK_MPI_AI_Disable(aiDevId);
-    if (result != 0) {
-        RK_LOGE("ai disable(dev:%d) fail, reason = %x", aiDevId, result);
+        ALOGE("vqe disable(dev:%d) fail, reason = %x\n", vqeChn, result);
         return RK_FAILURE;
     }
 
@@ -330,20 +434,20 @@ __FAILED:
 }
 
 int UACControlMpi::stopAo() {
-    UacControlMpi* ctx = reinterpret_cast<UacControlMpi *>(mCtx);
+    UacControlMpi* ctx = getContextMpi(mCtx);
     AUDIO_DEV aoDevId = ctx->stream.idCfg.aoDevId;
     AO_CHN aoChn = ctx->stream.idCfg.aoChnId;
     ALOGD("this:%p, stopAo(dev:%d, chn:%d), mode : %d\n", this, aoDevId, aoChn, ctx->mode);
     RK_MPI_AO_DisableReSmp(aoDevId, aoChn);
     RK_S32 result = RK_MPI_AO_DisableChn(aoDevId, aoChn);
     if (result != 0) {
-        RK_LOGE("ao disable channel(dev:%d, chn:%d) fail, reason = %x", aoDevId, aoChn, result);
+        ALOGE("ao disable channel(dev:%d, chn:%d) fail, reason = %x\n", aoDevId, aoChn, result);
         return RK_FAILURE;
     }
 
     result =  RK_MPI_AO_Disable(aoDevId);
     if (result != 0) {
-        RK_LOGE("ao disable(dev:%d) fail, reason = %x", aoDevId, result);
+        ALOGE("ao disable(dev:%d) fail, reason = %x\n", aoDevId, result);
         return RK_FAILURE;
     }
 
@@ -352,16 +456,41 @@ __FAILED:
     return -1;
 }
 
-void UACControlMpi::AiUnBindAo() {
-    UacControlMpi* ctx = reinterpret_cast<UacControlMpi *>(mCtx);
+void UACControlMpi::streamUnBind() {
+    UacControlMpi* ctx = getContextMpi(mCtx);
     MPP_CHN_S stSrcChn, stDstChn;
-    stSrcChn.enModId = RK_ID_AI;
-    stSrcChn.s32DevId = ctx->stream.idCfg.aiDevId;
-    stSrcChn.s32ChnId = ctx->stream.idCfg.aiChnId;
+    if (OPEN_VQE && ctx->mode == UAC_STREAM_PLAYBACK) {
+        stSrcChn.enModId = RK_ID_AI;
+        stSrcChn.s32DevId = ctx->stream.idCfg.aiDevId;
+        stSrcChn.s32ChnId = ctx->stream.idCfg.aiChnId;
 
-    stDstChn.enModId = RK_ID_AO;
-    stDstChn.s32DevId = ctx->stream.idCfg.aoDevId;
-    stDstChn.s32ChnId = ctx->stream.idCfg.aoChnId;
-    RK_MPI_SYS_UnBind(&stSrcChn, &stDstChn);
+        stDstChn.enModId = RK_ID_AF;
+        stDstChn.s32DevId = 0;
+        stDstChn.s32ChnId = ctx->stream.idCfg.vqeChnId;
+        ALOGD("AiUnBindVqe(mode:%d) : src(%d,%d), dst(%d,%d)\n", ctx->mode, stSrcChn.s32DevId,
+               stSrcChn.s32ChnId,stDstChn.s32DevId,stDstChn.s32ChnId);
+        RK_MPI_SYS_UnBind(&stSrcChn, &stDstChn);
+
+        stSrcChn.enModId = RK_ID_AF;
+        stSrcChn.s32DevId = 0;
+        stSrcChn.s32ChnId = ctx->stream.idCfg.vqeChnId;
+
+        stDstChn.enModId = RK_ID_AO;
+        stDstChn.s32DevId = ctx->stream.idCfg.aoDevId;
+        stDstChn.s32ChnId = ctx->stream.idCfg.aoChnId;
+        ALOGD("VqeUnBindAo(mode:%d) : src(%d,%d), dst(%d,%d)\n", ctx->mode, stSrcChn.s32DevId,
+               stSrcChn.s32ChnId,stDstChn.s32DevId,stDstChn.s32ChnId);
+        RK_MPI_SYS_UnBind(&stSrcChn, &stDstChn);
+    } else {
+        stSrcChn.enModId = RK_ID_AI;
+        stSrcChn.s32DevId = ctx->stream.idCfg.aiDevId;
+        stSrcChn.s32ChnId = ctx->stream.idCfg.aiChnId;
+
+        stDstChn.enModId = RK_ID_AO;
+        stDstChn.s32DevId = ctx->stream.idCfg.aoDevId;
+        stDstChn.s32ChnId = ctx->stream.idCfg.aoChnId;
+        ALOGD("AiUnBindAO(mode:%d) : src(%d,%d), dst(%d,%d)\n", ctx->mode, stSrcChn.s32DevId,
+               stSrcChn.s32ChnId,stDstChn.s32DevId,stDstChn.s32ChnId);
+        RK_MPI_SYS_UnBind(&stSrcChn, &stDstChn);
+    }
 }
-

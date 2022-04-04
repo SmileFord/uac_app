@@ -25,7 +25,7 @@ extern int uac_app_log_level;
 
 #ifndef LOG_TAG
 #define LOG_TAG "uac_app"
-#endif // LOG_TAG
+#endif
 
 #define ALOGI(format, ...)                                                  \
   do {                                                                         \

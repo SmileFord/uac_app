@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Rockchip Electronics Co. LTD
+ * Copyright 2022 Rockchip Electronics Co. LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -79,5 +79,8 @@ typedef struct _UacAudioConfig {
     int mute;
     int ppm;
 } UacAudioConfig;
+
+uint64_t getRelativeTimeMs();
+uint64_t getRelativeTimeUs();
 
 #endif  // SRC_INCLUDE_UAC_COMMON_DEF_H_

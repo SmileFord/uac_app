@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 Rockchip Electronics Co. LTD
+ * Copyright 2022 Rockchip Electronics Co. LTD
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,17 +34,16 @@ class UACControlMpi : public UACControl {
 
  protected:
     int startAi();
+    int startVqe();
     int startAo();
-    void AiBindAo();
+    void streamBind();
     int stopAi();
+    int stopVqe();
     int stopAo();
-    void AiUnBindAo();
+    void streamUnBind();
 
  private:
     void *mCtx;
 };
-
-void mpi_sys_init();
-void mpi_sys_destrory();
 
 #endif  // SRC_INCLUDE_UAC_CONTROL_MPI_H_
