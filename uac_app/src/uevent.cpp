@@ -216,23 +216,44 @@ void audio_set_samplerate(const struct _uevent *uevent) {
  * strs[2] = SUBSYSTEM=u_audio
  * strs[3] = USB_STATE=SET_VOLUME
  * strs[4] = STREAM_DIRECTION=OUT
- * strs[5] = VOLUME=72%
+ * strs[5] = VOLUME=0x7FFF
+ *    index       db
+ *   0x7FFF:   127.9961
+ *   ......
+ *   0x0100:   1.0000
+ *   ......
+ *   0x0002:   0.0078
+ *   0x0001:   0.0039
+ *   0x0000:   0.0000
+ *   0xFFFF:  -0.0039
+ *   0xFFFE:  -0.0078
+ *   ......
+ *   0xFE00:  -1.0000
+ *   ......
+ *   0x8002:  -127.9922
+ *   0x8001:  -127.9961
+ *
  */
 void audio_set_volume(const struct _uevent *uevent) {
     char *direct = uevent->strs[UAC_KEY_DIRECTION];
     char *volumeStr = uevent->strs[UAC_KEY_VOLUME];
+    int   unit  = 0x100;
     ALOGD("direct = %s volume = %s\n", direct, volumeStr);
-
     if (compare(direct, UAC_STREAM_DIRECT)) {
         char* device = &direct[strlen(UAC_STREAM_DIRECT)];
-        int volume = 100;
-        sscanf(volumeStr, "VOLUME=%d", &volume);
+        short volume = 0;
+        float db     = 0;
+        sscanf(volumeStr, "VOLUME=0x%x", &volume);
+        db = volume/(float)unit;
+        double precent = pow(10, db/10);
+        int  precentInt = (int)(precent*100);
+        ALOGD("set db = %f, precent = %lf, precentInt = %d\n", db, precent, precentInt);
         if (compare(device, UAC_REMOTE_PLAY)) {
-            ALOGD("set volume %d to usb record\n", volume);
-            uac_set_volume(UAC_STREAM_RECORD, volume);
+            ALOGD("set volume %d  to usb record\n", precentInt);
+            uac_set_volume(UAC_STREAM_RECORD, precentInt);
         } else if (compare(device, UAC_REMOTE_CAPTURE)) {
-            ALOGD("set volume %d to usb playback\n", volume);
-            uac_set_volume(UAC_STREAM_PLAYBACK, volume);
+            ALOGD("set volume %d  to usb playback\n", precentInt);
+            uac_set_volume(UAC_STREAM_PLAYBACK, precentInt);
         }
     }
 }
