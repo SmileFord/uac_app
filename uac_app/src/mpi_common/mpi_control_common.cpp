@@ -53,12 +53,12 @@ const static MpiAioDeviceAttrConfigMap sAioDevAttrCfgs[] = {
                     44100, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO},
     // mic
     { UAC_MPI_TYPE_AI, UAC_STREAM_PLAYBACK,
-                    "hw:0,0", 2, 48000, AUDIO_BIT_WIDTH_16,
-                    48000, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO},
+                    "hw:0,0", 2, 16000, AUDIO_BIT_WIDTH_16,
+                    16000, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO},
     // spk
     { UAC_MPI_TYPE_AO, UAC_STREAM_RECORD,
-                    "hw:0,0", 2, 48000, AUDIO_BIT_WIDTH_16,
-                    48000, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO},
+                    "hw:0,0", 2, 16000, AUDIO_BIT_WIDTH_16,
+                    16000, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO},
     // usb
     { UAC_MPI_TYPE_AO, UAC_STREAM_PLAYBACK,
                     "hw:1,0", 2, 44100, AUDIO_BIT_WIDTH_16,
@@ -66,7 +66,7 @@ const static MpiAioDeviceAttrConfigMap sAioDevAttrCfgs[] = {
 };
 
 const static MpiAfVqeChnAttrConfigMap sAfAttrCfgs[] = {
-    { "oem/usr/share/uac_app/configs_skv.json", 16000, 2, 3, 0, 3 },
+    { "/oem/usr/share/uac_app/configs_skv.json", 16000, 2, 3, 0, 3 },
 };
 
 RK_U32 UacMpiUtil::getSndCardSampleRate(UacMpiType type, int mode) {
