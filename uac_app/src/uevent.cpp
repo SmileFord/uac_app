@@ -242,8 +242,10 @@ void audio_set_volume(const struct _uevent *uevent) {
     if (compare(direct, UAC_STREAM_DIRECT)) {
         char* device = &direct[strlen(UAC_STREAM_DIRECT)];
         short volume = 0;
+        int volume_t = 0;
         float db     = 0;
-        sscanf(volumeStr, "VOLUME=0x%x", &volume);
+        sscanf(volumeStr, "VOLUME=0x%x", &volume_t);
+        volume = (short)volume_t;
         db = volume/(float)unit;
         double precent = pow(10, db/10);
         int  precentInt = (int)(precent*100);
