@@ -48,15 +48,9 @@ typedef struct _MpiAfChnAttrConfigMap {
 
 const static MpiAioDeviceAttrConfigMap sAioDevAttrCfgs[] = {
     // usb
-#ifdef USE_ON_3308
-    { UAC_MPI_TYPE_AI, UAC_STREAM_RECORD,
-                    "hw:2,0", 2, 44100, AUDIO_BIT_WIDTH_16,
-                    44100, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO},
-#else
     { UAC_MPI_TYPE_AI, UAC_STREAM_RECORD,
                     "hw:1,0", 2, 44100, AUDIO_BIT_WIDTH_16,
                     44100, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO},
-#endif
     // mic
     { UAC_MPI_TYPE_AI, UAC_STREAM_PLAYBACK,
                     "hw:0,0", 2, 16000, AUDIO_BIT_WIDTH_16,
@@ -66,15 +60,9 @@ const static MpiAioDeviceAttrConfigMap sAioDevAttrCfgs[] = {
                     "hw:0,0", 2, 16000, AUDIO_BIT_WIDTH_16,
                     16000, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO},
     // usb
-#ifdef USE_ON_3308
-    { UAC_MPI_TYPE_AO, UAC_STREAM_PLAYBACK,
-                    "hw:2,0", 2, 44100, AUDIO_BIT_WIDTH_16,
-                    44100, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO },
-#else
     { UAC_MPI_TYPE_AO, UAC_STREAM_PLAYBACK,
                     "hw:1,0", 2, 44100, AUDIO_BIT_WIDTH_16,
                     44100, AUDIO_BIT_WIDTH_16, AUDIO_SOUND_MODE_STEREO },
-#endif
 };
 
 const static MpiAfVqeChnAttrConfigMap sAfAttrCfgs[] = {

@@ -7,7 +7,6 @@ include_directories(src/include)
 
 option(UAC_GRAPH "uac open graph" OFF)
 option(UAC_MPI   "uac open mpi" ON)
-option(UAC_RK3308 "uac use on 3308" OFF)
 
 if (${UAC_GRAPH})
     add_definitions(-DUAC_GRAPH)
@@ -74,9 +73,7 @@ endif()
 install(TARGETS uac_app DESTINATION bin)
 
 
-if (UAC_RK3308)
-    add_definitions(-DUSE_ON_3308)
-else()
+if (NOT UAC_BUILDROOT)
     install(DIRECTORY . DESTINATION bin
     FILES_MATCHING PATTERN "*.sh"
     PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
